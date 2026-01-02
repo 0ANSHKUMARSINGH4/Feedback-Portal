@@ -1,0 +1,124 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4; /* Light gray background, could also be a lighter shade from the palette like #E0F2FF */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+.container {
+    background-color: #ffffff; /* Keeping container white for contrast */
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); /* Slightly stronger shadow */
+    width: 400px;
+    max-width: 90%;
+    text-align: center;
+}
+h2 {
+    margin-bottom: 20px;
+    color: #517891; /* Darker blue for headings */
+}
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #517891; /* Darker blue for labels */
+    font-weight: bold;
+}
+input[type="text"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+    width: calc(100% - 22px); /* Account for padding and border */
+    padding: 10px;
+    border: 1px solid #77B1D4; /* A medium blue for input borders */
+    border-radius: 4px;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    margin-top: 5px;
+}
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+select:focus,
+textarea:focus {
+    border-color: #57B9FF; /* Brighter blue on focus */
+    outline: none;
+    box-shadow: 0 0 5px rgba(87, 185, 255, 0.5); /* Soft glow on focus */
+}
+button {
+    background-color: #57B9FF; /* Main button color */
+    color: white;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    margin-top: 10px;
+    transition: background-color 0.3s ease; /* Smooth transition on hover */
+}
+button:hover {
+    background-color: #90D5FF; /* Lighter blue on hover */
+}
+p {
+    margin-top: 20px;
+    color: #666;
+}
+a {
+    color: #57B9FF; /* Links use the main blue */
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+    color: #90D5FF; /* Lighter blue on link hover */
+}
+.error-message {
+    color: #fff; /* White text for error message */
+    background-color: #dc3545; /* Standard red for error messages for clear indication */
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+.success-message {
+    color: #fff; /* White text for success message */
+    background-color: #28a745; /* Standard green for success messages for clear indication */
+    border: 1px solid #c3e6cb;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+.dashboard-actions {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.dashboard-actions .button {
+    display: block;
+    background-color: #77B1D4; /* A distinct blue for dashboard actions */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    text-decoration: none;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+.dashboard-actions .button:hover {
+    background-color: #517891; /* Darker blue on hover for dashboard buttons */
+}
+.logout-button {
+    background-color: #dc3545 !important; /* Keep red for logout to signify action */
+}
+.logout-button:hover {
+    background-color: #c82333 !important;
+}

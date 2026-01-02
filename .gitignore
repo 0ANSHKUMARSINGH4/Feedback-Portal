@@ -1,0 +1,20 @@
+# Ignore sensitive config
+config.php
+db.php
+db_connection.php
+
+# Ignore uploads
+uploads/
+*.png
+*.jpg
+*.jpeg
+
+# Ignore logs & reports
+*.log
+*.csv
+*.pdf
+
+# OS / Editor files
+.vscode/
+.DS_Store
+Thumbs.db
