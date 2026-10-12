@@ -1,0 +1,29 @@
+name: Build & Security CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup PHP 8.2
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: pdo, pdo_mysql, pdo_sqlite, openssl, mbstring
+
+    - name: Validate PHP Syntax (Lint)
+      run: |
+        find . -name "*.php" -exec php -l {} \;
+
+    - name: Verify Docker Container Build
+      run: |
+        docker build -t snti-feedback-portal:ci .
