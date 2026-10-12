@@ -3,74 +3,171 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="SNTI Feedback Portal - Shavak Nanavati Technical Institute training feedback and performance management system.">
-  <title>Welcome | SNTI Feedback Portal</title>
+  <meta name="description" content="SNTI Feedback Portal - Shavak Nanavati Technical Institute, Tata Steel training evaluation, trainee verification, and curriculum analytics platform.">
+  <title>SNTI Feedback Portal | Tata Steel Technical Training</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Modern Navigation Bar -->
+  <!-- Enterprise Header Bar -->
   <header class="navbar-header">
     <div class="navbar-container">
       <a href="index.html" class="brand-link">
-        <img src="assets/images/logo.png" alt="SNTI Logo" class="brand-logo" onerror="this.style.display='none'">
+        <img src="assets/images/logo.png" alt="Tata Steel SNTI Logo" class="brand-logo" onerror="this.style.display='none'">
         <div class="brand-text">
           <span class="brand-title">SNTI Feedback Portal</span>
-          <span class="brand-subtitle">Tata Steel Technical Training</span>
+          <span class="brand-subtitle">Tata Steel Technical Education</span>
         </div>
       </a>
       <div class="nav-links">
         <a href="login.php" class="btn btn-secondary" style="padding: 9px 20px;">Log In</a>
-        <a href="signup.php" class="btn btn-primary" style="padding: 9px 20px;">Sign Up</a>
+        <a href="signup.php" class="btn btn-primary" style="padding: 9px 20px;">Register Account</a>
       </div>
     </div>
   </header>
 
   <!-- Hero Section -->
-  <main class="portal-container" style="max-width: 960px; margin-top: 60px;">
-    <div class="portal-card" style="text-align: center; padding: 60px 30px;">
-      <div style="display: inline-block; padding: 6px 16px; background: var(--primary-light); color: var(--primary); font-weight: 700; border-radius: var(--radius-full); font-size: 0.85rem; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.05em;">
-        Trainee Performance & Program Feedback
+  <main class="portal-container" style="max-width: 1200px; margin-top: 30px;">
+    
+    <!-- Hero Header -->
+    <div style="text-align: center; max-width: 860px; margin: 0 auto 50px;">
+      <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 18px; background: #ffffff; border: 1.5px solid var(--border); border-radius: var(--radius-full); font-size: 0.825rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em; box-shadow: var(--shadow-sm); margin-bottom: 22px;">
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);"></span>
+        Shavak Nanavati Technical Institute &bull; Tata Steel
       </div>
-      <h1 style="font-size: 2.75rem; margin-bottom: 20px; font-weight: 800; letter-spacing: -0.02em;">
-        Continuous Improvement Through Your Voice
+      
+      <h1 style="font-size: 3rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.15; margin-bottom: 20px; color: var(--tata-navy);">
+        Empowering Technical Excellence Through Trainee Feedback
       </h1>
-      <p style="font-size: 1.15rem; color: var(--text-muted); max-width: 650px; margin: 0 auto 36px; line-height: 1.7;">
-        Welcome to the official Shavak Nanavati Technical Institute (SNTI) training evaluation platform. Complete your trainee verification and share valuable insights on course sessions, mentorship, and practical training.
+      
+      <p style="font-size: 1.15rem; color: var(--text-muted); line-height: 1.7; margin: 0 auto;">
+        Welcome to SNTI's unified portal for technical trainee onboarding, institutional verification, and confidential training module evaluation. Your assessments directly guide workshop upgrades and faculty development across Tata Steel.
       </p>
+    </div>
 
-      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-        <a href="signup.php" class="btn btn-primary" style="padding: 14px 32px; font-size: 1.05rem;">
-          Get Started as Trainee →
-        </a>
-        <a href="login.php" class="btn btn-secondary" style="padding: 14px 32px; font-size: 1.05rem;">
-          Sign In to Portal
-        </a>
+    <!-- Dual Role Gateways Grid -->
+    <div class="gateway-grid">
+      
+      <!-- Trainee Gateway -->
+      <div class="gateway-card">
+        <div>
+          <div class="gateway-icon">🎓</div>
+          <div style="display: inline-block; padding: 3px 10px; background: var(--primary-light); color: var(--primary); border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 12px;">
+            Trainee Portal
+          </div>
+          <h2 style="font-size: 1.6rem; margin-bottom: 10px;">Engineering Trainees</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">
+            Complete your mandatory academic enrollment, submit confidential feedback on practical sessions, and track your evaluation milestones.
+          </p>
+
+          <ul class="checklist">
+            <li><span class="check-icon">✓</span> Academic Verification (Branch, College & Contact)</li>
+            <li><span class="check-icon">✓</span> 5-Dimensional Interactive Rating Widget</li>
+            <li><span class="check-icon">✓</span> Confidential and Secure Feedback Submission</li>
+            <li><span class="check-icon">✓</span> Personal Trainee Dashboard & Status Tracking</li>
+          </ul>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px;">
+          <a href="signup.php" class="btn btn-primary" style="flex: 1; padding: 13px 20px;">
+            Register as Trainee →
+          </a>
+          <a href="login.php?role=user" class="btn btn-secondary" style="flex: 1; padding: 13px 20px;">
+            Trainee Sign In
+          </a>
+        </div>
       </div>
 
-      <!-- Feature highlights -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-top: 50px; text-align: left;">
-        <div style="padding: 20px; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border);">
-          <div style="font-size: 1.5rem; margin-bottom: 10px;">📋</div>
-          <h3 style="font-size: 1.05rem; margin-bottom: 6px;">Trainee Registration</h3>
-          <p style="font-size: 0.875rem; color: var(--text-muted);">Quickly submit your training profile, branch credentials, and academic details.</p>
+      <!-- Administrator Gateway -->
+      <div class="gateway-card admin-gateway">
+        <div>
+          <div class="gateway-icon">🛡️</div>
+          <div style="display: inline-block; padding: 3px 10px; background: #eef2ff; color: #4f46e5; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 12px;">
+            Administrative Center
+          </div>
+          <h2 style="font-size: 1.6rem; margin-bottom: 10px;">Faculty & Management</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">
+            Real-time quality analytics for SNTI instructors, program coordinators, and executive management to monitor department satisfaction scores.
+          </p>
+
+          <ul class="checklist">
+            <li><span class="check-icon" style="color: #4f46e5;">✓</span> Live Satisfaction KPIs & Metric Summaries</li>
+            <li><span class="check-icon" style="color: #4f46e5;">✓</span> Trainee Directory & Verification Audit</li>
+            <li><span class="check-icon" style="color: #4f46e5;">✓</span> Consolidated Audit-Ready CSV Data Exports</li>
+            <li><span class="check-icon" style="color: #4f46e5;">✓</span> Role-Based Access Control & Security Auditing</li>
+          </ul>
         </div>
-        <div style="padding: 20px; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border);">
-          <div style="font-size: 1.5rem; margin-bottom: 10px;">⭐</div>
-          <h3 style="font-size: 1.05rem; margin-bottom: 6px;">Structured Feedback</h3>
-          <p style="font-size: 0.875rem; color: var(--text-muted);">Provide rating points on technical content, instructors, and practical workshop modules.</p>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px;">
+          <a href="login.php?role=admin" class="btn btn-admin" style="flex: 1; padding: 13px 20px;">
+            Admin Sign In →
+          </a>
+          <a href="signup.php?role=admin" class="btn btn-secondary" style="flex: 1; padding: 13px 20px;">
+            Register Admin
+          </a>
         </div>
-        <div style="padding: 20px; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border);">
-          <div style="font-size: 1.5rem; margin-bottom: 10px;">📊</div>
-          <h3 style="font-size: 1.05rem; margin-bottom: 6px;">Admin Analytics</h3>
-          <p style="font-size: 0.875rem; color: var(--text-muted);">Administrators review department ratings, download CSV reports, and track trainee metrics.</p>
+      </div>
+
+    </div>
+
+    <!-- Institutional Metrics Strip -->
+    <div class="metrics-strip">
+      <div class="metric-box">
+        <div class="metric-number">5,000+</div>
+        <div class="metric-label">Annual SNTI Trainees</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-number">7</div>
+        <div class="metric-label">Engineering Disciplines</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-number">100%</div>
+        <div class="metric-label">Confidential Ratings</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-number">TQM</div>
+        <div class="metric-label">Tata Quality Management</div>
+      </div>
+    </div>
+
+    <!-- Workflow Stepper -->
+    <div class="card" style="margin-top: 40px; text-align: center; background: #ffffff;">
+      <h3 style="font-size: 1.35rem; margin-bottom: 8px;">Evaluation Workflow</h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 30px;">How the SNTI feedback lifecycle operates</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; text-align: left;">
+        <div style="padding: 16px; border-left: 3px solid var(--primary); background: #f8fafc; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">Step 1</div>
+          <h4 style="margin: 4px 0 6px;">Account Setup</h4>
+          <p style="font-size: 0.875rem; color: var(--text-muted);">Create your secure account with encrypted credentials.</p>
+        </div>
+        <div style="padding: 16px; border-left: 3px solid var(--primary); background: #f8fafc; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">Step 2</div>
+          <h4 style="margin: 4px 0 6px;">Academic Enrollment</h4>
+          <p style="font-size: 0.875rem; color: var(--text-muted);">Verify your branch, college background, and contact details.</p>
+        </div>
+        <div style="padding: 16px; border-left: 3px solid var(--primary); background: #f8fafc; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">Step 3</div>
+          <h4 style="margin: 4px 0 6px;">Module Assessment</h4>
+          <p style="font-size: 0.875rem; color: var(--text-muted);">Rate session quality, faculty engagement, and workshop labs.</p>
+        </div>
+        <div style="padding: 16px; border-left: 3px solid var(--success); background: #f8fafc; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--success); text-transform: uppercase;">Step 4</div>
+          <h4 style="margin: 4px 0 6px;">Curriculum Impact</h4>
+          <p style="font-size: 0.875rem; color: var(--text-muted);">Administrators review ratings to optimize technical workshops.</p>
         </div>
       </div>
     </div>
+
   </main>
 
-  <footer style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 0.875rem;">
-    &copy; <?php echo date('Y'); ?> SNTI Feedback Portal. Shavak Nanavati Technical Institute, Tata Steel.
+  <footer style="text-align: center; padding: 50px 20px; color: var(--text-muted); font-size: 0.9rem; border-top: 1px solid var(--border); margin-top: 60px; background: #ffffff;">
+    <p style="font-weight: 600; color: var(--tata-navy); margin-bottom: 6px;">
+      Shavak Nanavati Technical Institute (SNTI) &bull; Tata Steel Ltd.
+    </p>
+    <p style="font-size: 0.825rem; color: var(--text-light);">
+      &copy; 2026 SNTI Feedback Portal. Built for high reliability, institutional security, and continuous training excellence.
+    </p>
   </footer>
 
 </body>
