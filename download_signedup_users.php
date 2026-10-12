@@ -1,40 +1,47 @@
 <?php
-session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.html");
-    exit();
-}
+require_once 'db.php';
+requireAuth('admin');
 
-include 'db_connection.php';
+header('Content-Type: text/csv; charset=utf-8');
+header('Content-Disposition: attachment; filename=snti_users_export_' . date('Ymd_His') . '.csv');
 
-header('Content-Type: text/csv');
-header('Content-Disposition: attachment; filename="signedup_users.csv"');
+$out = fopen("php://output", "w");
+fputcsv($out, [
+    'User ID',
+    'Full Name',
+    'Email Address',
+    'System Role',
+    'Trainee Verified',
+    'Feedback Submitted',
+    'Account Created At'
+]);
 
-$output = fopen('php://output', 'w');
-fputcsv($output, ['User ID', 'Role', 'Account Created', 'Registered']);
-
-$result = $conn->query("SELECT user_id, role, created_at FROM users");
-
-while ($row = $result->fetch_assoc()) {
-    $user_id = $row['user_id'];
-    
-    // Check registration status
-    $check = $conn->prepare("SELECT id FROM complete_info WHERE user_id = ?");
-    $check->bind_param("s", $user_id);
-    $check->execute();
-    $check->store_result();
-    $registered = $check->num_rows > 0 ? "Yes" : "No";
-    $check->close();
-
-    fputcsv($output, [
-        $user_id,
+$query = "
+    SELECT 
+        u.user_id,
+        u.name,
+        u.email,
+        u.role,
+        u.created_at,
+        ci.id as trainee_id,
+        f.id as feedback_id
+    FROM users u
+    LEFT JOIN complete_info ci ON u.user_id = ci.user_id
+    LEFT JOIN feedback f ON u.user_id = f.user_id
+    ORDER BY u.created_at DESC
+";
+$stmt = $pdo->query($query);
+while ($row = $stmt->fetch()) {
+    fputcsv($out, [
+        $row['user_id'],
+        $row['name'],
+        $row['email'],
         $row['role'],
-        $row['created_at'],
-        $registered
+        !empty($row['trainee_id']) ? 'Yes' : 'No',
+        !empty($row['feedback_id']) ? 'Yes' : 'No',
+        $row['created_at']
     ]);
 }
 
-fclose($output);
-$conn->close();
+fclose($out);
 exit();
-?>

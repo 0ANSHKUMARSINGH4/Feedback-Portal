@@ -1,20 +1,24 @@
-# Ignore sensitive config
-config.php
-db.php
-db_connection.php
+# Ignore sensitive environment and config
+.env
+config.local.php
 
-# Ignore uploads
-uploads/
-*.png
-*.jpg
-*.jpeg
+# Ignore user uploads (except directory keep)
+uploads/*
+!uploads/.gitkeep
 
-# Ignore logs & reports
+# Ignore generated exports and logs
 *.log
 *.csv
 *.pdf
 
+# Database files (sqlite)
+*.sqlite
+*.sqlite3
+*.db
+!schema.sql
+
 # OS / Editor files
 .vscode/
+.idea/
 .DS_Store
 Thumbs.db

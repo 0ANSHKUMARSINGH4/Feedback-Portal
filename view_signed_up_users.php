@@ -1,151 +1,150 @@
 <?php
-session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.html");
-    exit();
-}
+require_once 'db.php';
+requireAuth('admin');
 
-include 'db_connection.php';
+$roleFilter = $_GET['role'] ?? 'all';
+$sql = "
+    SELECT 
+        u.user_id,
+        u.name,
+        u.email,
+        u.role,
+        u.created_at,
+        ci.id as trainee_reg_id,
+        ci.branch,
+        f.id as feedback_id
+    FROM users u
+    LEFT JOIN complete_info ci ON u.user_id = ci.user_id
+    LEFT JOIN feedback f ON u.user_id = f.user_id
+";
 
-// Filter by role
-$role_filter = $_GET['role'] ?? 'all';
-$role_condition = '';
-if ($role_filter === 'user') {
-    $role_condition = "WHERE role = 'user'";
-} elseif ($role_filter === 'admin') {
-    $role_condition = "WHERE role = 'admin'";
+$params = [];
+if ($roleFilter === 'user') {
+    $sql .= " WHERE u.role = 'user'";
+} elseif ($roleFilter === 'admin') {
+    $sql .= " WHERE u.role = 'admin'";
 }
+$sql .= " ORDER BY u.created_at DESC";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$users = $stmt->fetchAll();
+
+$pageTitle = "Audit Registered Users";
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Signed Up List</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #90D5FF, #77B1D4);
-            margin: 0;
-        }
-
-        table {
-            width: 90%;
-            margin: 30px auto;
-            border-collapse: collapse;
-            background-color: white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        th, td {
-            border: 1px solid #ccc;
-            padding: 12px;
-            text-align: center;
-        }
-
-        th {
-            background-color: #517891;
-            color: white;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        h2 {
-            text-align: center;
-            margin-top: 30px;
-            color: #333;
-        }
-
-        .controls {
-            text-align: center;
-            margin: 20px;
-        }
-
-        .controls form {
-            display: inline-block;
-            margin: 0 10px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            background-color: #57B9FF;
-            color: white;
-            text-decoration: none;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background-color: #517891;
-        }
-
-        .filter-select {
-            padding: 8px;
-            font-size: 16px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Accounts | SNTI Admin</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<?php 
-$pageTitle = "Total Signups";
-include 'navbar.php'; 
-?>
+<?php include 'navbar.php'; ?>
 
-<h2>Signed Up List</h2>
+<main class="portal-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px;">
+    <div>
+      <h1 style="font-size: 1.85rem; margin-bottom: 6px;">Registered User Accounts</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Total Signups: <strong><?php echo count($users); ?></strong> &bull; Portal account credentials audit
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="download_signedup_users.php" class="btn btn-primary">
+        📥 Export Users CSV
+      </a>
+      <a href="admin_dashboard.php" class="btn btn-secondary">
+        ← Back to Dashboard
+      </a>
+    </div>
+  </div>
 
-<div class="controls">
-    <form method="get">
-        <label for="role">Filter by Role:</label>
-        <select name="role" id="role" class="filter-select" onchange="this.form.submit()">
-            <option value="all" <?= $role_filter === 'all' ? 'selected' : '' ?>>All</option>
-            <option value="user" <?= $role_filter === 'user' ? 'selected' : '' ?>>Users</option>
-            <option value="admin" <?= $role_filter === 'admin' ? 'selected' : '' ?>>Admins</option>
-        </select>
-    </form>
+  <!-- Role Filter Bar -->
+  <div class="card" style="padding: 16px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="font-weight: 600; font-size: 0.95rem;">Filter by Account Role:</div>
+    <div style="display: flex; gap: 10px;">
+      <a href="view_signed_up_users.php?role=all" class="btn <?php echo ($roleFilter === 'all') ? 'btn-primary' : 'btn-secondary'; ?>" style="padding: 6px 16px; font-size: 0.85rem;">
+        All Accounts
+      </a>
+      <a href="view_signed_up_users.php?role=user" class="btn <?php echo ($roleFilter === 'user') ? 'btn-primary' : 'btn-secondary'; ?>" style="padding: 6px 16px; font-size: 0.85rem;">
+        Trainees
+      </a>
+      <a href="view_signed_up_users.php?role=admin" class="btn <?php echo ($roleFilter === 'admin') ? 'btn-primary' : 'btn-secondary'; ?>" style="padding: 6px 16px; font-size: 0.85rem;">
+        Administrators
+      </a>
+    </div>
+  </div>
 
-    <a href="download_signedup_users.php" class="btn">Download Details</a>
-</div>
-
-<table>
-    <tr>
-        <th>User ID</th>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Account Created</th>
-        <?php if ($role_filter !== 'admin') echo '<th>Registered</th>'; ?>
-    </tr>
-    <?php
-    $result = $conn->query("SELECT user_id, name, role, created_at FROM users $role_condition ORDER BY created_at DESC");
-
-    while ($row = $result->fetch_assoc()) {
-        echo "<tr>";
-        echo "<td>" . htmlspecialchars($row['user_id']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['role']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['created_at']) . "</td>";
-
-        if ($row['role'] !== 'admin') {
-            $check = $conn->prepare("SELECT id FROM complete_info WHERE user_id = ?");
-            $check->bind_param("s", $row['user_id']);
-            $check->execute();
-            $check->store_result();
-            $is_registered = $check->num_rows > 0 ? "Yes" : "No";
-            $check->close();
-            echo "<td>$is_registered</td>";
-        }
-
-        echo "</tr>";
-    }
-
-    $conn->close();
-    ?>
-</table>
+  <div class="table-wrapper">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>User Account</th>
+            <th>Role</th>
+            <th>Trainee Registration</th>
+            <th>Feedback Status</th>
+            <th>Joined Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($users as $u): ?>
+            <tr>
+              <td>
+                <strong><?php echo htmlspecialchars($u['name']); ?></strong>
+                <div style="font-size: 0.8rem; color: var(--text-muted);"><?php echo htmlspecialchars($u['email']); ?></div>
+                <div style="font-size: 0.75rem; color: var(--text-light);"><?php echo htmlspecialchars($u['user_id']); ?></div>
+              </td>
+              <td>
+                <?php if ($u['role'] === 'admin'): ?>
+                  <span style="background: #ede9fe; color: #6d28d9; padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">
+                    Admin
+                  </span>
+                <?php else: ?>
+                  <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">
+                    Trainee
+                  </span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if ($u['role'] === 'admin'): ?>
+                  <span style="color: var(--text-light);">—</span>
+                <?php elseif (!empty($u['trainee_reg_id'])): ?>
+                  <span style="color: var(--success); font-weight: 600; font-size: 0.85rem;">
+                    ✓ Registered (<?php echo htmlspecialchars($u['branch'] ?? 'N/A'); ?>)
+                  </span>
+                <?php else: ?>
+                  <span style="color: var(--warning); font-size: 0.85rem;">
+                    Pending Step 1
+                  </span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if ($u['role'] === 'admin'): ?>
+                  <span style="color: var(--text-light);">—</span>
+                <?php elseif (!empty($u['feedback_id'])): ?>
+                  <span style="color: var(--success); font-weight: 600; font-size: 0.85rem;">
+                    ✓ Submitted
+                  </span>
+                <?php else: ?>
+                  <span style="color: var(--text-light); font-size: 0.85rem;">
+                    Not Submitted
+                  </span>
+                <?php endif; ?>
+              </td>
+              <td style="white-space: nowrap; font-size: 0.85rem; color: var(--text-muted);">
+                <?php echo date("d M Y", strtotime($u['created_at'])); ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
 
 </body>
 </html>

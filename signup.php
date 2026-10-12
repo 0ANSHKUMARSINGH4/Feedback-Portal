@@ -1,232 +1,135 @@
 <?php
-session_start();
-include 'db_connection.php';
+require_once 'db.php';
 
-function generateUserId($prefix = "USR_", $length = 8) {
-    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    $user_id = '';
-    for ($i = 0; $i < $length; $i++) {
-        $user_id .= $characters[random_int(0, strlen($characters) - 1)];
-    }
-    return $prefix . $user_id;
+function generateRandomUserId(string $prefix = "USR_"): string {
+    return $prefix . bin2hex(random_bytes(4));
 }
 
+$pageTitle = "Create Account";
 $message = "";
-$success = false;
+$messageType = "danger";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $role = $_POST['role'];
-    $created_at = date("Y-m-d H:i:s");
-
-    if ($password !== $confirm_password) {
-        $message = "Passwords do not match!";
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $message = "Invalid security token. Please refresh the page.";
     } else {
-        $check_stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
-        $check_stmt->bind_param("s", $email);
-        $check_stmt->execute();
-        $check_stmt->store_result();
+        $name = trim($_POST['name'] ?? '');
+        $email = trim(filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL));
+        $password = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
 
-        if ($check_stmt->num_rows > 0) {
-            $message = "Email already exists!";
+        if (empty($name) || empty($email) || empty($password)) {
+            $message = "All fields are required.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $message = "Please enter a valid email address.";
+        } elseif (strlen($password) < 6) {
+            $message = "Password must be at least 6 characters.";
+        } elseif ($password !== $confirmPassword) {
+            $message = "Passwords do not match.";
         } else {
-            $check_stmt->close();
-
-            do {
-                $user_id = generateUserId();
-                $stmt = $conn->prepare("SELECT user_id FROM users WHERE user_id = ?");
-                $stmt->bind_param("s", $user_id);
-                $stmt->execute();
-                $stmt->store_result();
-            } while ($stmt->num_rows > 0);
-            $stmt->close();
-
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            $stmt = $conn->prepare("INSERT INTO users (user_id, password, name, email, created_at, role) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssss", $user_id, $hashed_password, $name, $email, $created_at, $role);
-
-            if ($stmt->execute()) {
-                $_SESSION['user_id'] = $user_id;
-                $_SESSION['role'] = $role;
-                $_SESSION['created_at'] = $created_at;
-                $_SESSION['name'] = $name;
-                $_SESSION['email'] = $email;
-
-                header("Location: " . ($role === "admin" ? "admin_dashboard.php" : "user_dashboard.php"));
-                exit();
+            // Check if email already registered
+            $checkStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
+            $checkStmt->execute([$email]);
+            if ($checkStmt->fetch()) {
+                $message = "An account with this email address already exists.";
             } else {
-                $message = "Signup failed. Please try again.";
+                // Generate unique user_id
+                do {
+                    $userId = generateRandomUserId();
+                    $uidStmt = $pdo->prepare("SELECT user_id FROM users WHERE user_id = ?");
+                    $uidStmt->execute([$userId]);
+                } while ($uidStmt->fetch());
+
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $role = 'user'; // Hardcode trainee user role to prevent privilege escalation
+
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO users (user_id, password, name, email, role, created_at)
+                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ");
+
+                if ($insertStmt->execute([$userId, $hashedPassword, $name, $email, $role])) {
+                    // Log user in automatically
+                    session_regenerate_id(true);
+                    $_SESSION['user_id'] = $userId;
+                    $_SESSION['role'] = $role;
+                    $_SESSION['name'] = $name;
+                    $_SESSION['email'] = $email;
+                    $_SESSION['created_at'] = date("Y-m-d H:i:s");
+
+                    try {
+                        $logStmt = $pdo->prepare("INSERT INTO logs (user_id, action) VALUES (?, 'New user registered')");
+                        $logStmt->execute([$userId]);
+                    } catch (Exception $e) {}
+
+                    header("Location: user_dashboard.php");
+                    exit();
+                } else {
+                    $message = "Account creation failed. Please try again.";
+                }
             }
         }
-        $check_stmt->close();
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Signup - Feedback Portal</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #90D5FF, #77B1D4);
-            margin: 0;
-            padding: 0;
-        }
-
-        .navbar {
-            background-color: #517891;
-            padding: 14px 28px;
-            display: flex;
-            align-items: center;
-            color: #fff;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .navbar img {
-            height: 40px;
-            margin-right: 15px;
-        }
-
-        .navbar h1 {
-            font-size: 22px;
-            margin: 0;
-            font-weight: bold;
-        }
-
-        .signup-container {
-            background: #ffffff;
-            padding: 30px 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            width: 360px;
-            margin: 80px auto;
-        }
-
-        .signup-container h2 {
-            margin-bottom: 20px;
-            text-align: center;
-            color: #517891;
-        }
-
-        .signup-container label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: bold;
-            color: #517891;
-        }
-
-        .signup-container input[type="text"],
-        .signup-container input[type="password"],
-        .signup-container input[type="email"],
-        .signup-container select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        .signup-container input[type="submit"] {
-            width: 100%;
-            padding: 12px;
-            background: #57B9FF;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .signup-container input[type="submit"]:hover {
-            background: #517891;
-        }
-
-        .signup-container .login-link {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .signup-container .login-link a {
-            color: #57B9FF;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .signup-container .login-link a:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 480px) {
-            .signup-container {
-                width: 90%;
-                margin: 60px auto;
-            }
-
-            .navbar h1 {
-                font-size: 18px;
-            }
-
-            .navbar img {
-                height: 35px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up | SNTI Feedback Portal</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- Navbar -->
-<div class="navbar">
-    <img src="dbb52941-0433-4d12-be04-f76574e028cd.png" alt="Tata Logo">
-    <h1>SNTI Feedback Portal</h1>
-</div>
+<?php include 'navbar.php'; ?>
 
-<!-- Signup Form -->
-<div class="signup-container">
-    <h2>Create Account</h2>
-    <form method="POST" action="">
-        <label for="name">Full Name</label>
-        <input type="text" name="name" required>
+<main class="auth-container">
+  <div class="card" style="margin-top: 20px;">
+    <div style="text-align: center; margin-bottom: 28px;">
+      <h2 style="font-size: 1.75rem; margin-bottom: 8px;">Create Trainee Account</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Join the SNTI portal to register & submit feedback</p>
+    </div>
 
-        <label for="email">Email</label>
-        <input type="email" name="email" required>
+    <?php if (!empty($message)): ?>
+      <div class="alert alert-<?php echo $messageType; ?>">
+        <span>⚠️</span> <?php echo htmlspecialchars($message); ?>
+      </div>
+    <?php endif; ?>
 
-        <label for="password">Password</label>
-        <input type="password" name="password" required>
+    <form method="POST" action="signup.php">
+      <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
 
-        <label for="confirm_password">Confirm Password</label>
-        <input type="password" name="confirm_password" required>
+      <div class="form-group">
+        <label for="name" class="form-label">Full Name</label>
+        <input type="text" name="name" id="name" class="form-control" placeholder="e.g. Rahul Sharma" required value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
+      </div>
 
-        <label for="role">Register As</label>
-        <select name="role" required>
-            <option value="">Select Role</option>
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-        </select>
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" name="email" id="email" class="form-control" placeholder="name@domain.com" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+      </div>
 
-        <input type="submit" value="Sign Up">
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" name="password" id="password" class="form-control" placeholder="At least 6 characters" required>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password" class="form-label">Confirm Password</label>
+        <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="Re-enter your password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+        Register as Trainee
+      </button>
     </form>
 
-    <div class="login-link">
-        Already have an account? <a href="login.php">Login here</a>
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 0.9rem; color: var(--text-muted);">
+      Already have an account? <a href="login.php" style="color: var(--primary); font-weight: 700; text-decoration: none;">Sign in here</a>
     </div>
-</div>
-
-<?php if (!empty($message)): ?>
-<script>
-    alert("<?= htmlspecialchars($message) ?>");
-</script>
-<?php endif; ?>
+  </div>
+</main>
 
 </body>
 </html>

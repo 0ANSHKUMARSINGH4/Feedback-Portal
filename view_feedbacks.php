@@ -1,148 +1,134 @@
 <?php
-session_start();
+require_once 'db.php';
+requireAuth('admin');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.html");
-    exit();
-}
+$query = "
+    SELECT f.*, u.name as trainee_name, u.email as trainee_email 
+    FROM feedback f 
+    LEFT JOIN users u ON f.user_id = u.user_id 
+    ORDER BY f.submitted_at DESC
+";
+$stmt = $pdo->query($query);
+$feedbacks = $stmt->fetchAll();
 
-include 'db_connection.php';
-
-$query = "SELECT user_id, department, feedback_message AS feedback, q1, q2, q3, q4, q5, submitted_at, created_at FROM feedback ORDER BY created_at DESC";
-$result = $conn->query($query);
-
-// CSV download
+// CSV Export Handler
 if (isset($_GET['download']) && $_GET['download'] === 'csv') {
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="feedback_report.csv"');
-    $output = fopen('php://output', 'w');
-    fputcsv($output, ['User ID', 'Department', 'Feedback', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Submitted At', 'Created At']);
-    $csvResult = $conn->query($query);
-    while ($row = $csvResult->fetch_assoc()) {
-        fputcsv($output, [
-            $row['user_id'], $row['department'], $row['feedback'],
-            $row['q1'], $row['q2'], $row['q3'], $row['q4'], $row['q5'],
-            $row['submitted_at'], $row['created_at']
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=snti_feedback_responses_' . date('Ymd_His') . '.csv');
+    
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['User ID', 'Trainee Name', 'Trainee Email', 'Department', 'Feedback Remarks', 'Q1 (Quality)', 'Q2 (Engagement)', 'Q3 (Resources)', 'Q4 (Relevance)', 'Q5 (Organization)', 'Average Score', 'Submitted At']);
+
+    foreach ($feedbacks as $row) {
+        $avg = round(($row['q1'] + $row['q2'] + $row['q3'] + $row['q4'] + $row['q5']) / 5.0, 2);
+        fputcsv($out, [
+            $row['user_id'],
+            $row['trainee_name'] ?? 'N/A',
+            $row['trainee_email'] ?? 'N/A',
+            $row['department'],
+            $row['feedback_message'],
+            $row['q1'],
+            $row['q2'],
+            $row['q3'],
+            $row['q4'],
+            $row['q5'],
+            $avg,
+            $row['submitted_at']
         ]);
     }
-    fclose($output);
+    fclose($out);
     exit();
 }
+
+$pageTitle = "Training Feedback Responses";
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Feedback Responses</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #EAF6FF;
-            margin: 0;
-            padding: 0;
-        }
-
-        .content {
-            padding: 20px 20px 30px; /* Offset for navbar */
-        }
-
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-
-        .btn-download {
-            margin-bottom: 20px;
-            padding: 10px 15px;
-            background: #57B9FF;
-            border: none;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-
-        .btn-download:hover {
-            background-color: #517891;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        th, td {
-            padding: 10px;
-            border: 1px solid #ccc;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        th {
-            background-color: #517891;
-            color: white;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        @media screen and (max-width: 768px) {
-            th, td {
-                font-size: 12px;
-                padding: 8px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feedback Responses | SNTI Admin</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<?php 
-$pageTitle = "Feedback Responses";
-include 'navbar.php'; 
-?>
+<?php include 'navbar.php'; ?>
 
-<div class="content">
-    <h2>All Feedback Responses</h2>
+<main class="portal-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px;">
+    <div>
+      <h1 style="font-size: 1.85rem; margin-bottom: 6px;">Trainee Feedback Responses</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Total Responses: <strong><?php echo count($feedbacks); ?></strong> &bull; Complete training evaluations
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <a href="view_feedbacks.php?download=csv" class="btn btn-primary">
+        📥 Export Feedback CSV
+      </a>
+      <a href="admin_dashboard.php" class="btn btn-secondary">
+        ← Back to Dashboard
+      </a>
+    </div>
+  </div>
 
-    <form method="get" action="view_feedbacks.php">
-        <button class="btn-download" type="submit" name="download" value="csv">Download as CSV</button>
-    </form>
-
-    <table>
-        <thead>
+  <?php if (empty($feedbacks)): ?>
+    <div class="card" style="text-align: center; padding: 50px; color: var(--text-muted);">
+      No feedback evaluations recorded in the system yet.
+    </div>
+  <?php else: ?>
+    <div class="table-wrapper">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
             <tr>
-                <th>User ID</th>
-                <th>Department</th>
-                <th>Feedback</th>
-                <th>Q1</th>
-                <th>Q2</th>
-                <th>Q3</th>
-                <th>Q4</th>
-                <th>Q5</th>
-                <th>Submitted At</th>
-                <th>Created At</th>
+              <th>Trainee</th>
+              <th>Department</th>
+              <th>Score</th>
+              <th>Remarks</th>
+              <th>Q1</th>
+              <th>Q2</th>
+              <th>Q3</th>
+              <th>Q4</th>
+              <th>Q5</th>
+              <th>Submitted</th>
             </tr>
-        </thead>
-        <tbody>
-            <?php while ($row = $result->fetch_assoc()): ?>
-            <tr>
-                <td><?= htmlspecialchars($row['user_id']) ?></td>
-                <td><?= htmlspecialchars($row['department']) ?></td>
-                <td><?= htmlspecialchars($row['feedback']) ?></td>
-                <td><?= htmlspecialchars($row['q1']) ?></td>
-                <td><?= htmlspecialchars($row['q2']) ?></td>
-                <td><?= htmlspecialchars($row['q3']) ?></td>
-                <td><?= htmlspecialchars($row['q4']) ?></td>
-                <td><?= htmlspecialchars($row['q5']) ?></td>
-                <td><?= htmlspecialchars($row['submitted_at']) ?></td>
-                <td><?= htmlspecialchars($row['created_at']) ?></td>
-            </tr>
-            <?php endwhile; ?>
-        </tbody>
-    </table>
-</div>
+          </thead>
+          <tbody>
+            <?php foreach ($feedbacks as $fb): 
+              $avg = round(($fb['q1'] + $fb['q2'] + $fb['q3'] + $fb['q4'] + $fb['q5']) / 5.0, 1);
+            ?>
+              <tr>
+                <td>
+                  <strong><?php echo htmlspecialchars($fb['trainee_name'] ?? 'Unknown'); ?></strong>
+                  <div style="font-size: 0.75rem; color: var(--text-light);"><?php echo htmlspecialchars($fb['user_id']); ?></div>
+                  <div style="font-size: 0.75rem; color: var(--text-light);"><?php echo htmlspecialchars($fb['trainee_email'] ?? ''); ?></div>
+                </td>
+                <td><?php echo htmlspecialchars($fb['department']); ?></td>
+                <td>
+                  <span style="color: #f59e0b; font-weight: 700;">★ <?php echo $avg; ?></span>
+                </td>
+                <td style="max-width: 280px; min-width: 200px;">
+                  <div style="font-size: 0.875rem; color: #334155; line-height: 1.5;">
+                    <?php echo nl2br(htmlspecialchars($fb['feedback_message'])); ?>
+                  </div>
+                </td>
+                <td><?php echo $fb['q1']; ?></td>
+                <td><?php echo $fb['q2']; ?></td>
+                <td><?php echo $fb['q3']; ?></td>
+                <td><?php echo $fb['q4']; ?></td>
+                <td><?php echo $fb['q5']; ?></td>
+                <td style="white-space: nowrap; font-size: 0.8rem; color: var(--text-muted);">
+                  <?php echo date("d M Y, h:i A", strtotime($fb['submitted_at'])); ?>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <?php endif; ?>
+</main>
 
 </body>
 </html>

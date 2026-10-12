@@ -1,55 +1,60 @@
 <?php
-session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.html");
-    exit();
+require_once 'db.php';
+requireAuth('admin');
+
+header('Content-Type: text/csv; charset=utf-8');
+header('Content-Disposition: attachment; filename=snti_full_audit_report_' . date('Ymd_His') . '.csv');
+
+$out = fopen("php://output", "w");
+
+// === Section 1: All User Accounts ===
+fputcsv($out, ['=== SECTION 1: USER ACCOUNTS AUDIT ===']);
+fputcsv($out, ['User ID', 'Full Name', 'Email', 'Role', 'Account Created']);
+$users = $pdo->query("SELECT user_id, name, email, role, created_at FROM users ORDER BY created_at DESC");
+while ($row = $users->fetch()) {
+    fputcsv($out, [$row['user_id'], $row['name'], $row['email'], $row['role'], $row['created_at']]);
+}
+fputcsv($out, []);
+
+// === Section 2: Registered Trainees ===
+fputcsv($out, ['=== SECTION 2: VERIFIED REGISTERED TRAINEES ===']);
+fputcsv($out, ['User ID', 'Trainee Name', 'Branch', 'Gender', 'DOB', 'Contact Phone', 'College / University', 'Address', 'Pincode', 'Registered Date']);
+$trainees = $pdo->query("SELECT user_id, name, branch, gender, dob, phone, college_name, address, pincode, created_at FROM complete_info ORDER BY created_at DESC");
+while ($row = $trainees->fetch()) {
+    fputcsv($out, [
+        $row['user_id'],
+        $row['name'],
+        $row['branch'],
+        $row['gender'],
+        $row['dob'],
+        $row['phone'],
+        $row['college_name'],
+        $row['address'],
+        $row['pincode'],
+        $row['created_at']
+    ]);
+}
+fputcsv($out, []);
+
+// === Section 3: Trainee Feedback Evaluations ===
+fputcsv($out, ['=== SECTION 3: TRAINING EVALUATION RESPONSES ===']);
+fputcsv($out, ['User ID', 'Department', 'Written Feedback Remarks', 'Q1 (Session Quality)', 'Q2 (Engagement)', 'Q3 (Resources & Labs)', 'Q4 (Industry Relevance)', 'Q5 (Organization)', 'Average Score', 'Submitted At']);
+$feedbacks = $pdo->query("SELECT user_id, department, feedback_message, q1, q2, q3, q4, q5, submitted_at FROM feedback ORDER BY submitted_at DESC");
+while ($row = $feedbacks->fetch()) {
+    $avg = round(($row['q1'] + $row['q2'] + $row['q3'] + $row['q4'] + $row['q5']) / 5.0, 2);
+    fputcsv($out, [
+        $row['user_id'],
+        $row['department'],
+        $row['feedback_message'],
+        $row['q1'],
+        $row['q2'],
+        $row['q3'],
+        $row['q4'],
+        $row['q5'],
+        $avg,
+        $row['submitted_at']
+    ]);
 }
 
-include 'db_connection.php';
-
-// Set CSV headers
-header('Content-Type: text/csv');
-header('Content-Disposition: attachment;filename=full_report.csv');
-
-// Open output stream
-$output = fopen("php://output", "w");
-
-// ==== Section 1: Signed-Up Users ====
-fputcsv($output, ['Signed-Up Users']);
-fputcsv($output, ['User ID', 'Role', 'Type', 'Created At']);
-
-$users = $conn->query("SELECT user_id, role, created_at FROM users");
-while ($row = $users->fetch_assoc()) {
-    $type = $row['role'] === 'admin' ? 'Admin' : 'Trainee';
-    fputcsv($output, [$row['user_id'], $row['role'], $type, $row['created_at']]);
-}
-
-fputcsv($output, []);
-
-// ==== Section 2: Registered Trainees ====
-fputcsv($output, ['Registered Trainees']);
-fputcsv($output, ['User ID', 'Full Name', 'Branch', 'Gender', 'DOB', 'Contact Number', 'College', 'Address', 'Pincode', 'Email', 'Photo (Filename)', 'Created At']);
-
-$trainees = $conn->query("
-    SELECT user_id, full_name, branch, gender, dob, contact_number, college, address, pincode, email, photo, created_at 
-    FROM complete_info
-    WHERE user_id IN (SELECT user_id FROM users WHERE role = 'user')
-");
-while ($row = $trainees->fetch_assoc()) {
-    fputcsv($output, $row);
-}
-
-fputcsv($output, []);
-
-// ==== Section 3: Feedbacks ====
-fputcsv($output, ['Feedbacks']);
-fputcsv($output, ['User ID', 'Department', 'Feedback Message', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Submitted At', 'Created At']);
-
-$feedbacks = $conn->query("SELECT user_id, department, feedback_message, q1, q2, q3, q4, q5, submitted_at, created_at FROM feedback");
-while ($row = $feedbacks->fetch_assoc()) {
-    fputcsv($output, $row);
-}
-
-fclose($output);
-$conn->close();
+fclose($out);
 exit();

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: snti-feedback-portal
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /index.html
+    autoDeploy: true
+    envVars:
+      - key: DB_DRIVER
+        value: sqlite
+      - key: FORCE_MYSQL
+        value: "0"

@@ -2,96 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Welcome to Feedback Portal</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(to right, #90D5FF, #77B1D4);
-      font-family: Arial, sans-serif;
-    }
-
-    /* Navbar Styling */
-    .navbar {
-      background-color: #517891;
-      padding: 14px 28px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .logo-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-title img.logo {
-      height: 40px;
-      width: auto;
-    }
-
-    .logo-title h1 {
-      font-size: 22px;
-      margin: 0;
-      font-weight: bold;
-      color: white;
-    }
-
-    .container {
-      background: #fff;
-      padding: 40px 60px;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-      text-align: center;
-      width: fit-content;
-      margin: 100px auto;
-    }
-
-    h1 {
-      color: #517891;
-      margin-bottom: 30px;
-    }
-
-    .btn {
-      display: inline-block;
-      margin: 10px;
-      padding: 14px 28px;
-      background-color: #57B9FF;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background-color 0.3s ease;
-    }
-
-    .btn:hover {
-      background-color: #517891;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SNTI Feedback Portal - Shavak Nanavati Technical Institute training feedback and performance management system.">
+  <title>Welcome | SNTI Feedback Portal</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Navbar with Logo and Title -->
-  <header class="navbar">
-    <div class="logo-title">
-      <img src="dbb52941-0433-4d12-be04-f76574e028cd.png" alt="Tata Logo" class="logo">
-      <h1>SNTI Feedback Portal</h1>
+  <!-- Modern Navigation Bar -->
+  <header class="navbar-header">
+    <div class="navbar-container">
+      <a href="index.html" class="brand-link">
+        <img src="assets/images/logo.png" alt="SNTI Logo" class="brand-logo" onerror="this.style.display='none'">
+        <div class="brand-text">
+          <span class="brand-title">SNTI Feedback Portal</span>
+          <span class="brand-subtitle">Tata Steel Technical Training</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <a href="login.php" class="btn btn-secondary" style="padding: 9px 20px;">Log In</a>
+        <a href="signup.php" class="btn btn-primary" style="padding: 9px 20px;">Sign Up</a>
+      </div>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <div class="container">
-    <h1>Welcome to Feedback Portal</h1>
-    <a href="signup.php" class="btn">Sign Up</a>
-    <a href="login.php" class="btn">Log In</a>
-  </div>
+  <!-- Hero Section -->
+  <main class="portal-container" style="max-width: 960px; margin-top: 60px;">
+    <div class="portal-card" style="text-align: center; padding: 60px 30px;">
+      <div style="display: inline-block; padding: 6px 16px; background: var(--primary-light); color: var(--primary); font-weight: 700; border-radius: var(--radius-full); font-size: 0.85rem; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.05em;">
+        Trainee Performance & Program Feedback
+      </div>
+      <h1 style="font-size: 2.75rem; margin-bottom: 20px; font-weight: 800; letter-spacing: -0.02em;">
+        Continuous Improvement Through Your Voice
+      </h1>
+      <p style="font-size: 1.15rem; color: var(--text-muted); max-width: 650px; margin: 0 auto 36px; line-height: 1.7;">
+        Welcome to the official Shavak Nanavati Technical Institute (SNTI) training evaluation platform. Complete your trainee verification and share valuable insights on course sessions, mentorship, and practical training.
+      </p>
+
+      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+        <a href="signup.php" class="btn btn-primary" style="padding: 14px 32px; font-size: 1.05rem;">
+          Get Started as Trainee →
+        </a>
+        <a href="login.php" class="btn btn-secondary" style="padding: 14px 32px; font-size: 1.05rem;">
+          Sign In to Portal
+        </a>
+      </div>
+
+      <!-- Feature highlights -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-top: 50px; text-align: left;">
+        <div style="padding: 20px; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="font-size: 1.5rem; margin-bottom: 10px;">📋</div>
+          <h3 style="font-size: 1.05rem; margin-bottom: 6px;">Trainee Registration</h3>
+          <p style="font-size: 0.875rem; color: var(--text-muted);">Quickly submit your training profile, branch credentials, and academic details.</p>
+        </div>
+        <div style="padding: 20px; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="font-size: 1.5rem; margin-bottom: 10px;">⭐</div>
+          <h3 style="font-size: 1.05rem; margin-bottom: 6px;">Structured Feedback</h3>
+          <p style="font-size: 0.875rem; color: var(--text-muted);">Provide rating points on technical content, instructors, and practical workshop modules.</p>
+        </div>
+        <div style="padding: 20px; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="font-size: 1.5rem; margin-bottom: 10px;">📊</div>
+          <h3 style="font-size: 1.05rem; margin-bottom: 6px;">Admin Analytics</h3>
+          <p style="font-size: 0.875rem; color: var(--text-muted);">Administrators review department ratings, download CSV reports, and track trainee metrics.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 0.875rem;">
+    &copy; <?php echo date('Y'); ?> SNTI Feedback Portal. Shavak Nanavati Technical Institute, Tata Steel.
+  </footer>
 
 </body>
 </html>

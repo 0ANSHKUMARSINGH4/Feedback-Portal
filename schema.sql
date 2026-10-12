@@ -1,0 +1,54 @@
+-- Unified Database Schema for SNTI Feedback Portal
+-- Compatible with MySQL (XAMPP / Remote MySQL / TiDB / Aiven) and SQLite (PDO)
+
+CREATE TABLE IF NOT EXISTS users (
+  user_id VARCHAR(32) NOT NULL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(120) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
+  profile_image VARCHAR(255) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS complete_info (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id VARCHAR(32) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  branch VARCHAR(50) DEFAULT NULL,
+  gender VARCHAR(20) DEFAULT NULL,
+  dob DATE DEFAULT NULL,
+  phone VARCHAR(20) DEFAULT NULL,
+  college_name VARCHAR(150) DEFAULT NULL,
+  address TEXT DEFAULT NULL,
+  pincode VARCHAR(20) DEFAULT NULL,
+  photo VARCHAR(255) DEFAULT NULL,
+  is_registered TINYINT(1) DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS feedback (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id VARCHAR(32) NOT NULL UNIQUE,
+  department VARCHAR(100) NOT NULL,
+  feedback_message TEXT NOT NULL,
+  q1 INT NOT NULL,
+  q2 INT NOT NULL,
+  q3 INT NOT NULL,
+  q4 INT NOT NULL,
+  q5 INT NOT NULL,
+  submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id VARCHAR(32) DEFAULT NULL,
+  action VARCHAR(255) NOT NULL,
+  timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Default demo admin account (Password: Admin@12345)
+INSERT INTO users (user_id, name, email, password, role, created_at)
+VALUES ('USR_ADMIN01', 'System Administrator', 'admin@feedbackportal.local', '$2y$10$55RTOJgQ9eJnfieLEq8GueZwI0dCNLDK1.DZbHmxVjlwV1HF3tS2q', 'admin', CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE name=name;

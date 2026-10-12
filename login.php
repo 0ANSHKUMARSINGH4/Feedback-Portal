@@ -1,192 +1,103 @@
 <?php
-session_start();
-include 'db_connection.php';
+require_once 'db.php';
 
+$pageTitle = "Log In";
 $message = "";
+$messageType = "danger";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-
-    $stmt = $conn->prepare("SELECT user_id, password, role, created_at, name FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $stmt->store_result();
-
-    if ($stmt->num_rows === 1) {
-        $stmt->bind_result($db_user_id, $db_password, $role, $created_at, $name);
-        $stmt->fetch();
-
-        if (password_verify($password, $db_password)) {
-            $_SESSION['user_id'] = $db_user_id;
-            $_SESSION['role'] = $role;
-            $_SESSION['created_at'] = $created_at;
-            $_SESSION['name'] = $name;
-            $_SESSION['email'] = $email;
-
-            header("Location: " . ($role === "admin" ? "admin_dashboard.php" : "user_dashboard.php"));
-            exit();
-        } else {
-            $message = "Incorrect password.";
-        }
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $message = "Invalid security token. Please refresh and try again.";
     } else {
-        $message = "No user found with this email.";
-    }
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-    $stmt->close();
-    $conn->close();
+        if (empty($email) || empty($password)) {
+            $message = "Please enter both your email and password.";
+        } else {
+            $stmt = $pdo->prepare("SELECT user_id, password, role, created_at, name FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            if ($user && password_verify($password, $user['password'])) {
+                // Regenerate session ID to prevent session fixation
+                session_regenerate_id(true);
+
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['created_at'] = $user['created_at'];
+                $_SESSION['name'] = $user['name'];
+                $_SESSION['email'] = $email;
+
+                // Log authentication action
+                try {
+                    $logStmt = $pdo->prepare("INSERT INTO logs (user_id, action) VALUES (?, 'User logged in')");
+                    $logStmt->execute([$user['user_id']]);
+                } catch (Exception $e) {
+                    // Suppress logging error
+                }
+
+                header("Location: " . ($user['role'] === "admin" ? "admin_dashboard.php" : "user_dashboard.php"));
+                exit();
+            } else {
+                $message = "Invalid email or password. Please try again.";
+            }
+        }
+    }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Login - Feedback Portal</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #90D5FF, #77B1D4);
-            margin: 0;
-            padding: 0;
-        }
-
-        /* Navbar */
-        .navbar {
-            background-color: #517891;
-            padding: 14px 28px;
-            display: flex;
-            align-items: center;
-            color: #fff;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .navbar img {
-            height: 40px;
-            margin-right: 15px;
-        }
-
-        .navbar h1 {
-            font-size: 22px;
-            margin: 0;
-            font-weight: bold;
-        }
-
-        /* Login Form */
-        .login-container {
-            background: #ffffff;
-            padding: 30px 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            width: 350px;
-            margin: 80px auto;
-        }
-
-        .login-container h2 {
-            margin-bottom: 20px;
-            text-align: center;
-            color: #517891;
-        }
-
-        .login-container label {
-            display: block;
-            text-align: left;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .login-container input[type="email"],
-        .login-container input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0 20px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        .login-container input[type="submit"] {
-            width: 100%;
-            padding: 12px;
-            background: #57B9FF;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .login-container input[type="submit"]:hover {
-            background: #517891;
-        }
-
-        .signup-link {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .signup-link a {
-            color: #57B9FF;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .signup-link a:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 480px) {
-            .login-container {
-                width: 90%;
-                margin: 60px auto;
-            }
-
-            .navbar h1 {
-                font-size: 18px;
-            }
-
-            .navbar img {
-                height: 35px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log In | SNTI Feedback Portal</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- Navbar with logo and title -->
-<div class="navbar">
-    <img src="dbb52941-0433-4d12-be04-f76574e028cd.png" alt="Tata Prashikshan Logo">
-    <h1>SNTI Feedback Portal</h1>
-</div>
+<?php include 'navbar.php'; ?>
 
-<!-- Login Form -->
-<div class="login-container">
-    <h2>Login</h2>
-    <form method="post" action="">
-        <label for="email">Email</label>
-        <input type="email" name="email" id="email" required>
+<main class="auth-container">
+  <div class="card" style="margin-top: 20px;">
+    <div style="text-align: center; margin-bottom: 28px;">
+      <h2 style="font-size: 1.75rem; margin-bottom: 8px;">Welcome Back</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Enter your credentials to access your portal</p>
+    </div>
 
-        <label for="password">Password</label>
-        <input type="password" name="password" id="password" required>
+    <?php if (!empty($message)): ?>
+      <div class="alert alert-<?php echo $messageType; ?>">
+        <span>⚠️</span> <?php echo htmlspecialchars($message); ?>
+      </div>
+    <?php endif; ?>
 
-        <input type="submit" value="Login">
+    <form method="POST" action="login.php">
+      <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" name="email" id="email" class="form-control" placeholder="name@domain.com" required autofocus value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+        Sign In
+      </button>
     </form>
 
-    <div class="signup-link">
-        Don't have an account? <a href="signup.html">Sign up here</a>
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 0.9rem; color: var(--text-muted);">
+      Don't have an account yet? <a href="signup.php" style="color: var(--primary); font-weight: 700; text-decoration: none;">Create one here</a>
     </div>
-</div>
 
-<!-- Alert for login errors -->
-<?php if (!empty($message)): ?>
-<script>
-    alert("<?= htmlspecialchars($message) ?>");
-</script>
-<?php endif; ?>
+    <div style="margin-top: 16px; background: #f8fafc; padding: 12px; border-radius: var(--radius-sm); border: 1px dashed var(--border); font-size: 0.8rem; color: var(--text-muted);">
+      <strong>Demo Admin:</strong> <code>admin@feedbackportal.local</code> / <code>Admin@12345</code>
+    </div>
+  </div>
+</main>
 
 </body>
 </html>

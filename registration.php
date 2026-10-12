@@ -1,210 +1,228 @@
 <?php
-session_start();
-include 'db_connection.php';
-$message = "";
+require_once 'db.php';
+requireAuth();
 
-// Generate random user_id function
-function generateUserId($length = 10) {
-    return substr(str_shuffle("abcdefghijklmnopqrstuvwxyz0123456789"), 0, $length);
+// If user is admin, redirect to admin dashboard
+if (($_SESSION['role'] ?? '') === 'admin') {
+    header("Location: admin_dashboard.php");
+    exit();
 }
 
+$userId = $_SESSION['user_id'];
+$message = "";
+$messageType = "danger";
+
+// Check if already registered
+$checkStmt = $pdo->prepare("SELECT id FROM complete_info WHERE user_id = ?");
+$checkStmt->execute([$userId]);
+if ($checkStmt->fetch()) {
+    header("Location: user_dashboard.php");
+    exit();
+}
+
+// Fetch current user details
+$userStmt = $pdo->prepare("SELECT name, email FROM users WHERE user_id = ?");
+$userStmt->execute([$userId]);
+$currentUser = $userStmt->fetch();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name']);
-    $branch = trim($_POST['branch']);
-    $gender = trim($_POST['gender']);
-    $dob = trim($_POST['dob']);
-    $phone = trim($_POST['phone']);
-    $college = trim($_POST['college']);
-    $address = trim($_POST['address']);
-    $pincode = trim($_POST['pincode']);
-    $email = trim($_POST['email']);
-    $password = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
-
-    // Check if email already registered in complete_info
-    $check = $conn->prepare("SELECT id FROM complete_info WHERE email = ?");
-    $check->bind_param("s", $email);
-    $check->execute();
-    $result = $check->get_result();
-
-    if ($result->num_rows > 0) {
-        $message = "<p class='error'>You have already registered.</p>";
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $message = "Invalid security token. Please refresh the page.";
     } else {
-        // Handle photo upload
-        $photoPath = "";
-        $photoFile = "";
+        $branch = trim($_POST['branch'] ?? '');
+        $gender = trim($_POST['gender'] ?? '');
+        $dob = trim($_POST['dob'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $college = trim($_POST['college'] ?? '');
+        $address = trim($_POST['address'] ?? '');
+        $pincode = trim($_POST['pincode'] ?? '');
 
-        if (isset($_FILES['photo']) && $_FILES['photo']['error'] === 0) {
-            $targetDir = "uploads/";
-            if (!is_dir($targetDir)) mkdir($targetDir);
-            $photoFile = time() . "_" . basename($_FILES["photo"]["name"]);
-            $photoPath = $targetDir . $photoFile;
-            if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $photoPath)) {
-                $message = "<p class='error'>Photo upload failed.</p>";
-            }
+        if (empty($branch) || empty($gender) || empty($dob) || empty($phone) || empty($college) || empty($address) || empty($pincode)) {
+            $message = "Please fill in all required registration fields.";
         } else {
-            $message = "<p class='error'>Invalid photo upload.</p>";
-        }
+            // Handle optional photo upload safely
+            $photoFilename = null;
+            if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+                $fileTmp = $_FILES['photo']['tmp_name'];
+                $fileName = $_FILES['photo']['name'];
+                $fileSize = $_FILES['photo']['size'];
+                $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                $allowed = ['jpg', 'jpeg', 'png', 'webp'];
 
-        if (empty($message)) {
-            // Generate unique user_id
-            $user_id = generateUserId();
-            $checkUID = $conn->prepare("SELECT user_id FROM users WHERE user_id = ?");
-            $checkUID->bind_param("s", $user_id);
-            $checkUID->execute();
-            $checkUID->store_result();
-            while ($checkUID->num_rows > 0) {
-                $user_id = generateUserId();
-                $checkUID->bind_param("s", $user_id);
-                $checkUID->execute();
-                $checkUID->store_result();
+                if (!in_array($ext, $allowed)) {
+                    $message = "Invalid photo format. Only JPG, PNG, and WebP are allowed.";
+                } elseif ($fileSize > 2 * 1024 * 1024) {
+                    $message = "Photo exceeds maximum limit of 2MB.";
+                } else {
+                    $targetDir = __DIR__ . '/uploads/';
+                    if (!is_dir($targetDir)) {
+                        mkdir($targetDir, 0755, true);
+                    }
+                    $photoFilename = 'trainee_' . bin2hex(random_bytes(8)) . '.' . $ext;
+                    if (!move_uploaded_file($fileTmp, $targetDir . $photoFilename)) {
+                        $photoFilename = null;
+                    }
+                }
             }
-            $checkUID->close();
 
-            // Insert into complete_info
-            $stmt = $conn->prepare("INSERT INTO complete_info 
-                (user_id, name, branch, gender, dob, phone, college_name, address, pincode, photo, email, password, is_registered, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())");
-            $stmt->bind_param("ssssssssssss", $user_id, $name, $branch, $gender, $dob, $phone, $college, $address, $pincode, $photoPath, $email, $password);
+            if (empty($message)) {
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO complete_info 
+                    (user_id, name, branch, gender, dob, phone, college_name, address, pincode, photo, is_registered, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                ");
 
-            if ($stmt->execute()) {
-                // Insert into users table
-                $userStmt = $conn->prepare("INSERT INTO users 
-                    (user_id, name, email, password, profile_image, created_at)
-                    VALUES (?, ?, ?, ?, ?, NOW())");
-                $userStmt->bind_param("sssss", $user_id, $name, $email, $password, $photoFile);
+                if ($insertStmt->execute([
+                    $userId,
+                    $currentUser['name'],
+                    $branch,
+                    $gender,
+                    $dob,
+                    $phone,
+                    $college,
+                    $address,
+                    $pincode,
+                    $photoFilename
+                ])) {
+                    // Update user's profile image if uploaded
+                    if ($photoFilename !== null) {
+                        $updateImg = $pdo->prepare("UPDATE users SET profile_image = ? WHERE user_id = ?");
+                        $updateImg->execute([$photoFilename, $userId]);
+                    }
 
-                if ($userStmt->execute()) {
-                    $_SESSION['user_id'] = $user_id;
-                    $_SESSION['email'] = $email;
+                    try {
+                        $logStmt = $pdo->prepare("INSERT INTO logs (user_id, action) VALUES (?, 'Trainee profile completed')");
+                        $logStmt->execute([$userId]);
+                    } catch (Exception $e) {}
+
                     header("Location: user_dashboard.php");
                     exit();
                 } else {
-                    $conn->query("DELETE FROM complete_info WHERE email = '$email'");
-                    $message = "<p class='error'>Error saving user account.</p>";
+                    $message = "Failed to save registration details. Please try again.";
                 }
-            } else {
-                $message = "<p class='error'>Registration failed. Try again.</p>";
             }
         }
     }
 }
+
+$pageTitle = "Trainee Registration";
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Trainee Registration</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #90D5FF, #77B1D4);
-        }
-        .container {
-            max-width: 700px;
-            margin: 50px auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h2 { text-align: center; color: #333; }
-        label { font-weight: bold; margin-top: 15px; display: block; }
-        input, select, textarea {
-            width: 100%; padding: 10px; margin-top: 6px;
-            border: 1px solid #ccc; border-radius: 6px;
-        }
-        button {
-            margin-top: 20px; padding: 12px; width: 100%;
-            background-color: #007BFF; color: white;
-            border: none; font-size: 16px; border-radius: 6px;
-            cursor: pointer;
-        }
-        button:hover { background-color: #0056b3; }
-        .error {
-            background: #f8d7da; color: #842029;
-            padding: 10px; border-radius: 6px; margin-top: 15px;
-        }
-        #preview {
-            margin-top: 10px; max-width: 100px; display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trainee Registration | SNTI Feedback Portal</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<?php 
-$pageTitle = "Trainee Registration";
-include 'navbar.php'; 
-?>
+<?php include 'navbar.php'; ?>
 
-<div class="container">
-    <h2>Trainee Registration</h2>
-    <?php if (!empty($message)) echo $message; ?>
-    <form method="POST" enctype="multipart/form-data">
-        <label for="name">Trainee Name</label>
-        <input type="text" name="name" id="name" required>
+<main class="portal-container" style="max-width: 760px;">
+  <div class="card">
+    <div style="text-align: center; margin-bottom: 28px;">
+      <span style="display: inline-block; padding: 4px 14px; background: var(--primary-light); color: var(--primary); font-weight: 700; border-radius: var(--radius-full); font-size: 0.8rem; margin-bottom: 12px; text-transform: uppercase;">
+        Step 1 Verification
+      </span>
+      <h2 style="font-size: 1.75rem; margin-bottom: 8px;">Trainee Academic Registration</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Fill in your institutional background to verify training eligibility at SNTI.
+      </p>
+    </div>
 
-        <label for="branch">Branch</label>
-        <select name="branch" id="branch" required>
-            <option value="">--Select Branch--</option>
-            <option value="CSE">CSE</option>
-            <option value="EE">EE</option>
-            <option value="ECE">ECE</option>
-            <option value="MECHANICAL">MECHANICAL</option>
-            <option value="AUTOMOBILE">AUTOMOBILE</option>
-        </select>
+    <?php if (!empty($message)): ?>
+      <div class="alert alert-<?php echo $messageType; ?>">
+        <span>⚠️</span> <?php echo htmlspecialchars($message); ?>
+      </div>
+    <?php endif; ?>
 
-        <label for="gender">Gender</label>
-        <select name="gender" id="gender" required>
-            <option value="">--Select Gender--</option>
+    <form method="POST" action="registration.php" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" value="<?php echo htmlspecialchars($currentUser['name'] ?? ''); ?>" disabled style="background: #f1f5f9;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Registered Email</label>
+          <input type="email" class="form-control" value="<?php echo htmlspecialchars($currentUser['email'] ?? ''); ?>" disabled style="background: #f1f5f9;">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+        <div class="form-group">
+          <label for="branch" class="form-label">Engineering Branch *</label>
+          <select name="branch" id="branch" class="form-control" required>
+            <option value="">-- Select Branch --</option>
+            <option value="Computer Science & Engineering">Computer Science & Engineering</option>
+            <option value="Electrical Engineering">Electrical Engineering</option>
+            <option value="Electronics & Communication">Electronics & Communication</option>
+            <option value="Mechanical Engineering">Mechanical Engineering</option>
+            <option value="Metallurgical & Materials">Metallurgical & Materials</option>
+            <option value="Civil Engineering">Civil Engineering</option>
+            <option value="Automobile Engineering">Automobile Engineering</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="gender" class="form-label">Gender *</label>
+          <select name="gender" id="gender" class="form-control" required>
+            <option value="">-- Select Gender --</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
-        </select>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
 
-        <label for="dob">Date of Birth</label>
-        <input type="date" name="dob" id="dob" required>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+        <div class="form-group">
+          <label for="dob" class="form-label">Date of Birth *</label>
+          <input type="date" name="dob" id="dob" class="form-control" required>
+        </div>
 
-        <label for="phone">Phone Number</label>
-        <input type="tel" name="phone" id="phone" pattern="[0-9]{10}" required>
+        <div class="form-group">
+          <label for="phone" class="form-label">Contact Number *</label>
+          <input type="tel" name="phone" id="phone" class="form-control" placeholder="10-digit mobile number" pattern="[0-9]{10}" required>
+        </div>
+      </div>
 
-        <label for="college">College Name</label>
-        <input type="text" name="college" id="college" required>
+      <div class="form-group">
+        <label for="college" class="form-label">College / University Name *</label>
+        <input type="text" name="college" id="college" class="form-control" placeholder="e.g. National Institute of Technology, Jamshedpur" required>
+      </div>
 
-        <label for="address">Address</label>
-        <textarea name="address" id="address" required></textarea>
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 18px;">
+        <div class="form-group">
+          <label for="address" class="form-label">Residential Address *</label>
+          <input type="text" name="address" id="address" class="form-control" placeholder="Street, City, State" required>
+        </div>
 
-        <label for="pincode">Pincode</label>
-        <input type="text" name="pincode" id="pincode" pattern="[0-9]{6}" required>
+        <div class="form-group">
+          <label for="pincode" class="form-label">Pincode *</label>
+          <input type="text" name="pincode" id="pincode" class="form-control" placeholder="6-digit pincode" pattern="[0-9]{6}" required>
+        </div>
+      </div>
 
-        <label for="photo">Upload Photo</label>
-        <input type="file" name="photo" id="photo" accept="image/*" required>
-        <img id="preview" src="#" alt="Preview" />
+      <div class="form-group">
+        <label for="photo" class="form-label">Upload Trainee ID Photo (Optional, Max 2MB)</label>
+        <input type="file" name="photo" id="photo" class="form-control" accept="image/jpeg,image/png,image/webp">
+      </div>
 
-        <label for="email">Email</label>
-        <input type="email" name="email" id="email" required>
-
-        <label for="password">Password</label>
-        <input type="password" name="password" id="password" required>
-
-        <button type="submit">Register</button>
+      <div style="display: flex; gap: 14px; margin-top: 24px;">
+        <button type="submit" class="btn btn-primary" style="flex: 2;">
+          Save & Complete Trainee Registration →
+        </button>
+        <a href="user_dashboard.php" class="btn btn-secondary" style="flex: 1;">
+          Cancel
+        </a>
+      </div>
     </form>
-</div>
-
-<script>
-document.getElementById('photo').addEventListener('change', function () {
-    const preview = document.getElementById('preview');
-    const file = this.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-    }
-});
-</script>
+  </div>
+</main>
 
 </body>
 </html>

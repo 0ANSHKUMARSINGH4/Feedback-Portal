@@ -1,63 +1,53 @@
 <?php
-session_start();
+require_once 'db.php';
+requireAuth('admin');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.html");
-    exit();
-}
+header('Content-Type: text/csv; charset=utf-8');
+header('Content-Disposition: attachment; filename=snti_trainees_export_' . date('Ymd_His') . '.csv');
 
-include 'db_connection.php';
-
-// Set CSV headers
-header('Content-Type: text/csv');
-header('Content-Disposition: attachment;filename=registered_trainees.csv');
-
-$output = fopen("php://output", "w");
-
-// CSV Header Row
-fputcsv($output, [
+$out = fopen("php://output", "w");
+fputcsv($out, [
     'User ID',
-    'Full Name',
+    'Trainee Name',
+    'Account Email',
+    'Branch',
     'Gender',
     'DOB',
-    'Phone Number',
-    'Email',
-    'Branch',
+    'Contact Phone',
     'College Name',
     'Address',
     'Pincode',
-    'Photo Filename',
-    'Created At'
+    'Feedback Submitted',
+    'Registered Date'
 ]);
 
-// Join users and complete_info, only for users with role='user'
 $query = "
-    SELECT u.user_id, u.name AS full_name, ci.gender, ci.dob, ci.phone, ci.email, 
-           ci.branch, ci.college_name, ci.address, ci.pincode, ci.photo, ci.created_at
-    FROM users u
-    JOIN complete_info ci ON u.user_id = ci.user_id
-    WHERE u.role = 'user'
+    SELECT 
+        ci.*,
+        u.email as account_email,
+        f.id as feedback_id
+    FROM complete_info ci
+    LEFT JOIN users u ON ci.user_id = u.user_id
+    LEFT JOIN feedback f ON ci.user_id = f.user_id
+    ORDER BY ci.created_at DESC
 ";
-
-$result = $conn->query($query);
-
-while ($row = $result->fetch_assoc()) {
-    fputcsv($output, [
+$stmt = $pdo->query($query);
+while ($row = $stmt->fetch()) {
+    fputcsv($out, [
         $row['user_id'],
-        $row['full_name'],
+        $row['name'],
+        $row['account_email'] ?? 'N/A',
+        $row['branch'],
         $row['gender'],
         $row['dob'],
         $row['phone'],
-        $row['email'],
-        $row['branch'],
         $row['college_name'],
         $row['address'],
         $row['pincode'],
-        $row['photo'],
+        !empty($row['feedback_id']) ? 'Yes' : 'No',
         $row['created_at']
     ]);
 }
 
-fclose($output);
-$conn->close();
+fclose($out);
 exit();

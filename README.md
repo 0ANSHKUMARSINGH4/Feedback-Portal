@@ -1,94 +1,93 @@
-# Feedback Portal System
+# SNTI Feedback Portal System
 
-A role-based web application built using PHP and MySQL that allows users to submit feedback and administrators to manage users, trainees, and generate reports.
+[![PHP Version](https://img.shields.io/badge/PHP-8.2%2B-blue.svg)](https://www.php.net/)
+[![Database](https://img.shields.io/badge/Database-MySQL%20%7C%20SQLite-orange.svg)](https://www.mysql.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com)
 
----
-
-## 🔹 Features
-
-### 👤 User Module
-- User registration & login
-- Submit feedback
-- View profile and update details
-- Change password
-- Secure logout
-
-### 🛠 Admin Module
-- Admin dashboard
-- View all users & trainees
-- View and manage feedbacks
-- Generate and download reports (CSV/PDF)
-- View signup statistics
+A modern, role-based web application developed for **Shavak Nanavati Technical Institute (SNTI, Tata Steel)**. The portal facilitates seamless trainee academic verification, confidential structured training feedback, and comprehensive administrator analytics with multi-section CSV reporting.
 
 ---
 
-## 🔹 Tech Stack
+## 🌟 Key Features
 
-- **Frontend:** HTML, CSS, JavaScript
-- **Backend:** PHP
-- **Database:** MySQL
-- **Server:** XAMPP / Apache
-- **Version Control:** Git & GitHub
+### 👤 Trainee Module
+* **Account Registration & Authentication:** Secure registration and login with bcrypt-hashed passwords and session hardening.
+* **Academic Verification (Step 1):** Submit engineering discipline (CSE, EE, Mechanical, etc.), university affiliation, contact info, and trainee ID verification.
+* **Structured Training Evaluation (Step 2):** Interactive 5-star rating widget evaluating session quality, instructor engagement, lab equipment access, industry relevance, and schedule organization.
+* **Personal Profile & Settings:** Manage profile avatars, email preferences, password updates, and account lifecycle.
 
----
+### 🛠️ Administrator Module
+* **Analytics Dashboard:** Live metrics tracking total feedback responses, verified trainees, signup accounts, and overall average satisfaction scores.
+* **Audit & Management:** Detailed inspection tables for all trainee accounts with role-based filtering.
+* **Multi-Section CSV Reporting:** 1-click export of consolidated training audit logs, trainee directories, and evaluation responses.
 
-## 🔹 Project Structure
-
-```text
-Feedback-Portal/
-│── admin_dashboard.php
-│── user_dashboard.php
-│── login.php
-│── signup.php
-│── profile.php
-│── settings.php
-│── feedback_form.php
-│── navbar.php
-│── style.css
-│── main.js
-│── uploads/
-│── README.md
-│── .gitignore
-```
+### 🛡️ Security & Reliability Architecture
+* **Cross-Site Request Forgery (CSRF) Protection:** Cryptographically secure token validation across every POST request.
+* **SQL Injection Prevention:** 100% prepared PDO statements with parameter binding.
+* **Cross-Site Scripting (XSS) Mitigation:** Output sanitization using `htmlspecialchars()`.
+* **Zero-Configuration Hybrid Database:** Native support for MySQL with automatic SQLite fallback for serverless/containerized deployments (e.g. Render).
 
 ---
 
-## 🔹 Installation & Setup
+## 🏗️ Tech Stack
 
-1. **Clone the repository**
+* **Frontend:** HTML5, Modern Vanilla CSS (Glassmorphism, CSS Custom Properties, Responsive Grids), JavaScript
+* **Backend:** PHP 8.2+ (PDO MySQL / PDO SQLite)
+* **Web Server:** Apache / XAMPP / Docker
+* **Deployment Platform:** Render (Docker containerized)
+
+---
+
+## 🚀 Quick Start (Local Setup via XAMPP)
+
+1. **Clone the Repository:**
    ```bash
    git clone https://github.com/0ANSHKUMARSINGH4/Feedback-Portal.git
-    ```
+   cd Feedback-Portal
+   ```
 
-2. **Move the project to the XAMPP htdocs folder.**
+2. **Move to XAMPP htdocs:**
+   Place the project folder inside your `C:\xampp\htdocs\` directory.
 
-3. **Create a MySQL database**
-    - **Database name:** feedback_system
-    - Import the required tables using phpMyAdmin.
+3. **Database Setup (Optional - MySQL):**
+   * Open **phpMyAdmin** (`http://localhost/phpmyadmin`).
+   * Create a database named `feedback_system`.
+   * Import `schema.sql`.
+   *(Note: If MySQL is not running, the application will automatically initialize an SQLite database so it works out-of-the-box!)*
 
-4. **Configure database connection**
-
-    ```bash
-    // config.php
-    $host = "localhost";
-    $user = "root";
-    $pass = "";
-    $db   = "feedback_system";
-    ```
-
-5. **Run the project in browser**
-    ```bash
-    http://localhost/Feedback-Portal
-    ```
----
-
-## Live : https://feedbackportal.great-site.net/
+4. **Launch the Portal:**
+   Visit `http://localhost/feedback_portal/` in your browser.
 
 ---
 
+## 🌐 Deploy to Render
+
+Deploying this portal to Render is fully automated using the included `Dockerfile` and `render.yaml`:
+
+1. Fork or push your changes to your GitHub repository.
+2. Log in to [Render](https://dashboard.render.com/).
+3. Click **New +** > **Web Service**.
+4. Connect your GitHub repository `Feedback-Portal`.
+5. Render will automatically detect the `Dockerfile`:
+   * **Runtime:** Docker
+   * **Instance Type:** Free
+   * **Region:** Any (e.g., Oregon or Frankfurt)
+6. Click **Deploy Web Service**!
+
+Your live site will be ready at `https://<your-service-name>.onrender.com` without risk of sudden inactivity suspensions.
+
+---
+
+## 🔑 Default Administrator Credentials
+
+For immediate testing and grading:
+* **Email:** `admin@feedbackportal.local`
+* **Password:** `Admin@12345`
+
+---
 
 ## 👨‍💻 Author
 
-Ansh Kumar Singh
-Final Year B.Tech Student
-GitHub: https://github.com/0ANSHKUMARSINGH4
+**Ansh Kumar Singh**  
+GitHub: [@0ANSHKUMARSINGH4](https://github.com/0ANSHKUMARSINGH4)
