@@ -5,9 +5,16 @@ $pageTitle = "Log In";
 $message = "";
 $messageType = "danger";
 
+if (isset($_GET['msg']) && $_GET['msg'] === 'timeout') {
+    $message = "Your session expired due to inactivity. Please sign in again.";
+    $messageType = "info";
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         $message = "Invalid security token. Please refresh and try again.";
+    } elseif (isRateLimited('login', 5, 300)) {
+        $message = "Too many failed login attempts. Please wait 5 minutes before trying again.";
     } else {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
@@ -20,6 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password'])) {
+                clearRateLimit('login');
                 // Regenerate session ID to prevent session fixation
                 session_regenerate_id(true);
 
@@ -28,6 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $_SESSION['created_at'] = $user['created_at'];
                 $_SESSION['name'] = $user['name'];
                 $_SESSION['email'] = $email;
+                $_SESSION['last_activity'] = time();
 
                 // Log authentication action
                 try {
@@ -40,6 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 header("Location: " . ($user['role'] === "admin" ? "admin_dashboard.php" : "user_dashboard.php"));
                 exit();
             } else {
+                recordFailedAttempt('login');
                 $message = "Invalid email or password. Please try again.";
             }
         }

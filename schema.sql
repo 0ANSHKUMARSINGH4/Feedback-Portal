@@ -1,5 +1,5 @@
 -- Unified Database Schema for SNTI Feedback Portal
--- Compatible with MySQL (XAMPP / Remote MySQL / TiDB / Aiven) and SQLite (PDO)
+-- Compatible with MySQL (XAMPP / Remote MySQL / TiDB / Aiven / Render)
 
 CREATE TABLE IF NOT EXISTS users (
   user_id VARCHAR(32) NOT NULL PRIMARY KEY,
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(20) NOT NULL DEFAULT 'user',
   profile_image VARCHAR(255) DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS complete_info (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -24,8 +24,9 @@ CREATE TABLE IF NOT EXISTS complete_info (
   pincode VARCHAR(20) DEFAULT NULL,
   photo VARCHAR(255) DEFAULT NULL,
   is_registered TINYINT(1) DEFAULT 1,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_complete_info_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS feedback (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -38,15 +39,17 @@ CREATE TABLE IF NOT EXISTS feedback (
   q4 INT NOT NULL,
   q5 INT NOT NULL,
   submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id VARCHAR(32) DEFAULT NULL,
   action VARCHAR(255) NOT NULL,
-  timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+  timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_logs_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Default demo admin account (Password: Admin@12345)
 INSERT INTO users (user_id, name, email, password, role, created_at)

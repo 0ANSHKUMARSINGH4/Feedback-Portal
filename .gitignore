@@ -2,9 +2,10 @@
 .env
 config.local.php
 
-# Ignore user uploads (except directory keep)
+# Ignore user uploads (except directory keep and security htaccess)
 uploads/*
 !uploads/.gitkeep
+!uploads/.htaccess
 
 # Ignore generated exports and logs
 *.log

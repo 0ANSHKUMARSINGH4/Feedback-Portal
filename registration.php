@@ -39,6 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($branch) || empty($gender) || empty($dob) || empty($phone) || empty($college) || empty($address) || empty($pincode)) {
             $message = "Please fill in all required registration fields.";
+        } elseif (!preg_match('/^[0-9]{10}$/', $phone)) {
+            $message = "Contact phone number must be exactly 10 digits.";
+        } elseif (!preg_match('/^[0-9]{6}$/', $pincode)) {
+            $message = "Pincode must be exactly 6 digits.";
         } else {
             // Handle optional photo upload safely
             $photoFilename = null;
@@ -49,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
                 $allowed = ['jpg', 'jpeg', 'png', 'webp'];
 
-                if (!in_array($ext, $allowed)) {
-                    $message = "Invalid photo format. Only JPG, PNG, and WebP are allowed.";
+                if (!in_array($ext, $allowed) || @getimagesize($fileTmp) === false) {
+                    $message = "Invalid image file. Only verified JPG, PNG, and WebP images are allowed.";
                 } elseif ($fileSize > 2 * 1024 * 1024) {
                     $message = "Photo exceeds maximum limit of 2MB.";
                 } else {

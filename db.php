@@ -4,14 +4,40 @@
  * Supports PDO MySQL and fallback PDO SQLite for flexible deployment (e.g. Render).
  */
 
+// 1. Send Defensive Security Headers (Vulnerability #23)
+if (!headers_sent()) {
+    header("X-Content-Type-Options: nosniff");
+    header("X-Frame-Options: SAMEORIGIN");
+    header("X-XSS-Protection: 1; mode=block");
+    header("Referrer-Policy: strict-origin-when-cross-origin");
+}
+
+// 2. Harden Session Security Settings (Vulnerabilities #12, #30)
 if (session_status() === PHP_SESSION_NONE) {
-    // Harden session security cookies
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.cookie_samesite', 'Lax');
     if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-        ini_set('session.cookie_secure', 1);
+        ini_set('session.cookie_secure', '1');
     }
     session_start();
+}
+
+// 3. Session Inactivity Timeout (30 minutes = 1800s) (Vulnerability #30)
+$sessionTimeout = 1800;
+if (!empty($_SESSION['user_id'])) {
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $sessionTimeout)) {
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+        }
+        session_destroy();
+        header("Location: login.php?msg=timeout");
+        exit();
+    }
+    $_SESSION['last_activity'] = time();
 }
 
 // Load optional local configuration if present
@@ -31,9 +57,8 @@ class Database {
         $databaseUrl = getenv('DATABASE_URL'); // Common on Render / Railway / Heroku
 
         if (!empty($databaseUrl)) {
-            // Parse standard database connection URL if provided
             $parsed = parse_url($databaseUrl);
-            $dbDriver = $parsed['scheme'] === 'postgres' ? 'pgsql' : 'mysql';
+            $dbDriver = ($parsed['scheme'] ?? '') === 'postgres' ? 'pgsql' : 'mysql';
             $dbHost = $parsed['host'] ?? 'localhost';
             $dbPort = $parsed['port'] ?? ($dbDriver === 'pgsql' ? 5432 : 3306);
             $dbUser = $parsed['user'] ?? 'root';
@@ -59,15 +84,14 @@ class Database {
                 self::$instance = new PDO("sqlite:" . $sqlitePath, null, null, $options);
                 self::initSqliteTables(self::$instance);
             } else {
-                // Try connecting to MySQL. If localhost connection fails, fallback gracefully to SQLite
-                // so the app never crashes with 500 on Render or fresh local setups.
+                // Connect to MySQL with fallback to SQLite for frictionless local/container boots
                 $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
                 try {
                     self::$instance = new PDO($dsn, $dbUser, $dbPass, $options);
                 } catch (PDOException $mysqlEx) {
-                    // If MySQL fails on deployment and DB_DRIVER is not explicitly enforced, use SQLite fallback
                     if (getenv('FORCE_MYSQL') === '1') {
-                        throw $mysqlEx;
+                        error_log("Forced MySQL connection failed: " . $mysqlEx->getMessage());
+                        die("Database connection failed. Please ensure MySQL service is running and credentials are valid.");
                     }
                     $sqlitePath = __DIR__ . '/feedback_portal.sqlite';
                     self::$instance = new PDO("sqlite:" . $sqlitePath, null, null, $options);
@@ -75,13 +99,16 @@ class Database {
                 }
             }
         } catch (PDOException $e) {
-            die("Database connection failed: " . htmlspecialchars($e->getMessage()));
+            // Suppress internal system/database paths in user response (Vulnerability #14)
+            error_log("Database initialization error: " . $e->getMessage());
+            die("A database connection error occurred. Please contact the administrator.");
         }
 
         return self::$instance;
     }
 
     private static function initSqliteTables(PDO $pdo): void {
+        $pdo->exec("PRAGMA foreign_keys = ON;");
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS users (
                 user_id TEXT PRIMARY KEY,
@@ -105,7 +132,8 @@ class Database {
                 pincode TEXT DEFAULT NULL,
                 photo TEXT DEFAULT NULL,
                 is_registered INTEGER DEFAULT 1,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
             CREATE TABLE IF NOT EXISTS feedback (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,7 +146,8 @@ class Database {
                 q4 INTEGER NOT NULL,
                 q5 INTEGER NOT NULL,
                 submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
             CREATE TABLE IF NOT EXISTS logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,7 +170,7 @@ class Database {
     }
 }
 
-// Global helper: CSRF tokens
+// Global helper: CSRF tokens (Vulnerability #7)
 function generateCsrfToken(): string {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -166,6 +195,53 @@ function requireAuth(?string $requiredRole = null): void {
         header("Location: " . (($_SESSION['role'] ?? '') === 'admin' ? 'admin_dashboard.php' : 'user_dashboard.php'));
         exit();
     }
+}
+
+// Password strength validator (Vulnerability #8)
+function validatePasswordPolicy(string $password): ?string {
+    if (strlen($password) < 8) {
+        return "Password must be at least 8 characters long.";
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return "Password must contain at least one uppercase letter (A-Z).";
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return "Password must contain at least one lowercase letter (a-z).";
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return "Password must contain at least one number (0-9).";
+    }
+    return null;
+}
+
+// Rate Limiting on authentication actions (Vulnerability #19)
+function isRateLimited(string $action, int $maxAttempts = 5, int $decaySeconds = 300): bool {
+    $now = time();
+    if (!isset($_SESSION['rate_limits'][$action])) {
+        return false;
+    }
+    $entry = $_SESSION['rate_limits'][$action];
+    if ($now - $entry['first_attempt'] > $decaySeconds) {
+        unset($_SESSION['rate_limits'][$action]);
+        return false;
+    }
+    return $entry['count'] >= $maxAttempts;
+}
+
+function recordFailedAttempt(string $action): void {
+    $now = time();
+    if (!isset($_SESSION['rate_limits'][$action])) {
+        $_SESSION['rate_limits'][$action] = [
+            'count' => 1,
+            'first_attempt' => $now
+        ];
+    } else {
+        $_SESSION['rate_limits'][$action]['count']++;
+    }
+}
+
+function clearRateLimit(string $action): void {
+    unset($_SESSION['rate_limits'][$action]);
 }
 
 // Global database connection instance

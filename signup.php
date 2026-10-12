@@ -12,6 +12,8 @@ $messageType = "danger";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         $message = "Invalid security token. Please refresh the page.";
+    } elseif (isRateLimited('signup', 10, 300)) {
+        $message = "Too many registration attempts. Please wait 5 minutes.";
     } else {
         $name = trim($_POST['name'] ?? '');
         $email = trim(filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL));
@@ -22,8 +24,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $message = "All fields are required.";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $message = "Please enter a valid email address.";
-        } elseif (strlen($password) < 6) {
-            $message = "Password must be at least 6 characters.";
+        } elseif ($pwdError = validatePasswordPolicy($password)) {
+            $message = $pwdError;
         } elseif ($password !== $confirmPassword) {
             $message = "Passwords do not match.";
         } else {

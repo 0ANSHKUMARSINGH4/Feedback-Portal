@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     libsqlite3-dev \
     sqlite3 \
     && docker-php-ext-install pdo pdo_mysql pdo_sqlite \
-    && a2enmod rewrite \
+    && a2enmod rewrite headers \
+    && sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

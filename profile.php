@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $size = $_FILES['profile_image']['size'];
             $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 
-            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-                $message = "Invalid image type. Only JPG, PNG, and WebP are allowed.";
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp']) || @getimagesize($tmp) === false) {
+                $message = "Invalid image file. Only verified JPG, PNG, and WebP images are allowed.";
                 $messageType = "danger";
             } elseif ($size > 2 * 1024 * 1024) {
                 $message = "Image must be under 2MB.";
@@ -52,10 +52,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 2. Update Email
+        // 2. Update Email (Requires Password Confirmation - Vulnerability #15)
         elseif ($action === 'update_email') {
             $newEmail = trim(filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL));
-            if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+            $emailPassword = $_POST['email_password'] ?? '';
+
+            if (empty($emailPassword) || !password_verify($emailPassword, $user['password'])) {
+                $message = "Current password is required to update your email address.";
+                $messageType = "danger";
+            } elseif (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
                 $message = "Please enter a valid email address.";
                 $messageType = "danger";
             } elseif ($newEmail === $user['email']) {
@@ -77,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 3. Update Password
+        // 3. Update Password (Enforces Password Policy - Vulnerability #8)
         elseif ($action === 'change_password') {
             $curPass = $_POST['current_password'] ?? '';
             $newPass = $_POST['new_password'] ?? '';
@@ -86,19 +91,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($curPass) || empty($newPass) || empty($confPass)) {
                 $message = "Please fill in all password fields.";
                 $messageType = "danger";
+            } elseif (!password_verify($curPass, $user['password'])) {
+                $message = "Current password is incorrect.";
+                $messageType = "danger";
             } elseif ($newPass !== $confPass) {
                 $message = "New passwords do not match.";
                 $messageType = "danger";
-            } elseif (strlen($newPass) < 6) {
-                $message = "New password must be at least 6 characters.";
-                $messageType = "danger";
-            } elseif (!password_verify($curPass, $user['password'])) {
-                $message = "Current password is incorrect.";
+            } elseif ($pwdErr = validatePasswordPolicy($newPass)) {
+                $message = $pwdErr;
                 $messageType = "danger";
             } else {
                 $newHash = password_hash($newPass, PASSWORD_DEFAULT);
                 $up = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
                 $up->execute([$newHash, $userId]);
+                $user['password'] = $newHash;
                 $message = "Password changed successfully.";
             }
         }
@@ -208,11 +214,16 @@ $pageTitle = "Profile & Settings";
         <input type="hidden" name="action" value="update_email">
 
         <div class="form-group">
-          <label for="email" class="form-label">Email</label>
+          <label for="email" class="form-label">New Email Address</label>
           <input type="email" name="email" id="email" class="form-control" value="<?php echo htmlspecialchars($user['email']); ?>" required>
         </div>
 
-        <button type="submit" class="btn btn-secondary btn-block">Save Email</button>
+        <div class="form-group">
+          <label for="email_password" class="form-label">Current Password (Required to confirm)</label>
+          <input type="password" name="email_password" id="email_password" class="form-control" placeholder="Enter your current password" required>
+        </div>
+
+        <button type="submit" class="btn btn-secondary btn-block">Confirm & Update Email</button>
       </form>
     </div>
 
