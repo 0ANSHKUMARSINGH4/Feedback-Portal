@@ -14,18 +14,22 @@
   --primary-gradient: linear-gradient(135deg, #0284c7 0%, #0369a1 60%, #07162c 100%);
   --admin-gradient: linear-gradient(135deg, #4f46e5 0%, #3730a3 60%, #1e1b4b 100%);
   
-  --bg-gradient: radial-gradient(circle at 10% 10%, #f0f9ff 0%, #e0f2fe 35%, #f8fafc 100%);
-  --bg-mesh: radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.08) 0px, transparent 50%),
-             radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.06) 0px, transparent 50%),
-             radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.06) 0px, transparent 50%),
-             #f8fafc;
+  /* Rich Light Blue Enterprise Gradient System for Every Page */
+  --bg-gradient: linear-gradient(135deg, #bfdbfe 0%, #e0f2fe 30%, #e8f4fc 65%, #c7e0f9 100%);
+  --bg-mesh: 
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.35) 0px, transparent 48%),
+    radial-gradient(at 100% 5%, rgba(2, 132, 199, 0.22) 0px, transparent 42%),
+    radial-gradient(at 50% 45%, rgba(186, 230, 253, 0.50) 0px, transparent 55%),
+    radial-gradient(at 5% 90%, rgba(14, 165, 233, 0.25) 0px, transparent 48%),
+    radial-gradient(at 95% 95%, rgba(3, 105, 161, 0.20) 0px, transparent 45%),
+    linear-gradient(145deg, #d8ecfe 0%, #e6f3fe 25%, #d1ebfd 55%, #e1effc 80%, #cfe6fb 100%);
              
   --surface: #ffffff;
   --surface-glass: rgba(255, 255, 255, 0.92);
-  --surface-hover: #f8fafc;
-  --border: #e2e8f0;
+  --surface-hover: #f0f7ff;
+  --border: #bae6fd;
   --border-focus: #0284c7;
-  --border-glass: rgba(255, 255, 255, 0.85);
+  --border-glass: rgba(255, 255, 255, 0.95);
   
   --text-main: #0f172a;
   --text-muted: #475569;
