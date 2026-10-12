@@ -3,7 +3,7 @@ services:
     name: snti-feedback-portal
     runtime: docker
     plan: free
-    region: oregon
+    region: singapore
     healthCheckPath: /index.html
     autoDeploy: true
     envVars:
