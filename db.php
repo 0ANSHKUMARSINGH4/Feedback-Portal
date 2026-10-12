@@ -54,16 +54,24 @@ class Database {
         }
 
         $dbDriver = getenv('DB_DRIVER') ?: 'mysql'; // 'mysql' or 'sqlite'
-        $databaseUrl = getenv('DATABASE_URL'); // Common on Render / Railway / Heroku
+        $databaseUrl = getenv('MYSQL_URL') ?: getenv('DATABASE_URL'); // Common on Render / TiDB / Aiven / Railway
 
+        $isCloudHost = false;
         if (!empty($databaseUrl)) {
             $parsed = parse_url($databaseUrl);
             $dbDriver = ($parsed['scheme'] ?? '') === 'postgres' ? 'pgsql' : 'mysql';
             $dbHost = $parsed['host'] ?? 'localhost';
             $dbPort = $parsed['port'] ?? ($dbDriver === 'pgsql' ? 5432 : 3306);
-            $dbUser = $parsed['user'] ?? 'root';
-            $dbPass = $parsed['pass'] ?? '';
+            $dbUser = isset($parsed['user']) ? urldecode($parsed['user']) : 'root';
+            $dbPass = isset($parsed['pass']) ? urldecode($parsed['pass']) : '';
             $dbName = ltrim($parsed['path'] ?? 'feedback_system', '/');
+            if (isset($parsed['query'])) {
+                // If query contains database name or flags
+                parse_str($parsed['query'], $queryParams);
+                if (!empty($queryParams['database'])) {
+                    $dbName = $queryParams['database'];
+                }
+            }
         } else {
             $dbHost = getenv('DB_HOST') ?: 'localhost';
             $dbPort = getenv('DB_PORT') ?: 3306;
@@ -72,11 +80,26 @@ class Database {
             $dbName = getenv('DB_NAME') ?: 'feedback_system';
         }
 
+        $isCloudHost = (
+            strpos($dbHost, 'tidbcloud.com') !== false ||
+            strpos($dbHost, 'aivencloud.com') !== false ||
+            strpos($dbHost, 'clever-cloud.com') !== false ||
+            strpos($dbHost, 'planetscale.net') !== false ||
+            strpos($dbHost, 'render.com') !== false ||
+            strpos($dbHost, 'aws') !== false
+        );
+
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
+
+        // Cloud MySQL SSL/TLS compatibility (TiDB Cloud, Aiven, PlanetScale require SSL)
+        if ($isCloudHost || getenv('DB_SSL') === 'true' || getenv('DB_SSL') === '1' || strpos($databaseUrl ?? '', 'ssl') !== false) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = true;
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        }
 
         try {
             if ($dbDriver === 'sqlite') {
@@ -88,10 +111,11 @@ class Database {
                 $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
                 try {
                     self::$instance = new PDO($dsn, $dbUser, $dbPass, $options);
+                    self::initMysqlTables(self::$instance);
                 } catch (PDOException $mysqlEx) {
                     if (getenv('FORCE_MYSQL') === '1') {
                         error_log("Forced MySQL connection failed: " . $mysqlEx->getMessage());
-                        die("Database connection failed. Please ensure MySQL service is running and credentials are valid.");
+                        die("Database connection failed: " . htmlspecialchars($mysqlEx->getMessage()));
                     }
                     $sqlitePath = __DIR__ . '/feedback_portal.sqlite';
                     self::$instance = new PDO("sqlite:" . $sqlitePath, null, null, $options);
@@ -105,6 +129,75 @@ class Database {
         }
 
         return self::$instance;
+    }
+
+    private static function initMysqlTables(PDO $pdo): void {
+        try {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id VARCHAR(32) NOT NULL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    email VARCHAR(120) NOT NULL UNIQUE,
+                    password VARCHAR(255) NOT NULL,
+                    role VARCHAR(20) NOT NULL DEFAULT 'user',
+                    profile_image VARCHAR(255) DEFAULT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS complete_info (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(32) NOT NULL UNIQUE,
+                    name VARCHAR(100) NOT NULL,
+                    branch VARCHAR(50) DEFAULT NULL,
+                    gender VARCHAR(20) DEFAULT NULL,
+                    dob DATE DEFAULT NULL,
+                    phone VARCHAR(20) DEFAULT NULL,
+                    college_name VARCHAR(150) DEFAULT NULL,
+                    address TEXT DEFAULT NULL,
+                    pincode VARCHAR(20) DEFAULT NULL,
+                    photo VARCHAR(255) DEFAULT NULL,
+                    is_registered TINYINT(1) DEFAULT 1,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_complete_info_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS feedback (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(32) NOT NULL UNIQUE,
+                    department VARCHAR(100) NOT NULL,
+                    feedback_message TEXT NOT NULL,
+                    q1 INT NOT NULL,
+                    q2 INT NOT NULL,
+                    q3 INT NOT NULL,
+                    q4 INT NOT NULL,
+                    q5 INT NOT NULL,
+                    submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(32) DEFAULT NULL,
+                    action VARCHAR(255) NOT NULL,
+                    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_logs_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+            $stmt->execute();
+            if ($stmt->fetchColumn() == 0) {
+                $adminStmt = $pdo->prepare("
+                    INSERT INTO users (user_id, name, email, password, role)
+                    VALUES ('USR_ADMIN01', 'System Administrator', 'admin@feedbackportal.local', '$2y$10$55RTOJgQ9eJnfieLEq8GueZwI0dCNLDK1.DZbHmxVjlwV1HF3tS2q', 'admin')
+                    ON DUPLICATE KEY UPDATE name=name
+                ");
+                $adminStmt->execute();
+            }
+        } catch (Throwable $t) {
+            error_log('MySQL auto-init notice: ' . $t->getMessage());
+        }
     }
 
     private static function initSqliteTables(PDO $pdo): void {

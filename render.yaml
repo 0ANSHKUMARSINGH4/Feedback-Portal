@@ -8,6 +8,18 @@ services:
     autoDeploy: true
     envVars:
       - key: DB_DRIVER
-        value: sqlite
-      - key: FORCE_MYSQL
-        value: "0"
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        value: feedback_system
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: ADMIN_SECRET
+        value: SNTI_ADMIN_2026
